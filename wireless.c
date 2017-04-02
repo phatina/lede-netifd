@@ -19,6 +19,7 @@
 
 #define WIRELESS_SETUP_RETRY	3
 
+struct vlist_tree wireless_credentials; // TODO: implement free
 struct vlist_tree wireless_devices;
 struct avl_tree wireless_drivers;
 static struct blob_buf b;
@@ -504,6 +505,12 @@ wdev_update(struct vlist_tree *tree, struct vlist_node *node_new,
 }
 
 static void
+wcred_update(struct vlist_tree *tree, struct vlist_node *node_new,
+             struct vlist_node *node_old)
+{
+}
+
+static void
 wireless_add_handler(const char *script, const char *name, json_object *obj)
 {
 	struct wireless_driver *drv;
@@ -547,6 +554,10 @@ void wireless_init(void)
 	vlist_init(&wireless_devices, avl_strcmp, wdev_update);
 	wireless_devices.keep_old = true;
 	wireless_devices.no_delete = true;
+
+        vlist_init(&wireless_credentials, avl_strcmp, wcred_update);
+        wireless_credentials.keep_old = true;
+        wireless_credentials.no_delete = true;
 
 	avl_init(&wireless_drivers, avl_strcmp, false, NULL);
 	drv_fd = netifd_open_subdir("wireless");

@@ -17,6 +17,7 @@
 #include <libubox/utils.h>
 #include "interface.h"
 
+extern struct vlist_tree wireless_credentials;
 extern struct vlist_tree wireless_devices;
 extern struct avl_tree wireless_drivers;
 
@@ -63,6 +64,16 @@ struct wireless_device {
 	int retry;
 
 	int vif_idx;
+};
+
+struct wireless_credentials_cfg {
+    struct vlist_node node;
+
+    char *name;
+
+    char *encryption;
+    char *ssid;
+    char *key;
 };
 
 struct wireless_interface {

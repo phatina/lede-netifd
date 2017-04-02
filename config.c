@@ -327,6 +327,52 @@ config_parse_wireless_device(struct uci_section *s)
 	uci_to_blob(&b, s, drv->device.config);
 	wireless_device_create(drv, s->e.name, b.head);
 }
+static void
+config_parse_wireless_credentials(struct uci_section *s, const char *name)
+{
+	const char *encryption;
+	const char *ssid;
+	const char *key;
+	char *c_name;
+	char *c_encryption;
+	char *c_ssid;
+	char *c_key;
+	struct wireless_credentials_cfg *credentials;
+
+	encryption = uci_lookup_option_string(uci_ctx, s, "encryption");
+	if (!encryption)
+		return;
+
+	ssid = uci_lookup_option_string(uci_ctx, s, "ssid");
+	if (!ssid)
+		return;
+
+	key = uci_lookup_option_string(uci_ctx, s, "key");
+	if (!key)
+		return;
+
+	credentials = (struct wireless_credentials_cfg*) calloc_a(
+		sizeof(*credentials),
+		&c_name, strlen(name) + 1,
+		&c_encryption, strlen(encryption) + 1,
+		&c_ssid, strlen(ssid) + 1,
+		&c_key, strlen(key) + 1);
+	if (!credentials)
+		return;
+
+	credentials->name = strcpy(c_name, name);
+	credentials->encryption = strcpy(c_encryption, encryption);
+	credentials->ssid = strcpy(c_ssid, ssid);
+	credentials->key = strcpy(c_key, key);
+
+	netifd_log_message(L_NOTICE, "wifi %s encryption: %s\n", credentials->name, credentials->encryption);
+	netifd_log_message(L_NOTICE, "wifi %s ssid: %s\n", credentials->name, credentials->ssid);
+	netifd_log_message(L_NOTICE, "wifi %s key: %s\n", credentials->name, credentials->key);
+	netifd_log_message(L_NOTICE, "configuration node: %p\n", &credentials->node);
+	netifd_log_message(L_NOTICE, "wireless_credentials: %p\n", &wireless_credentials);
+
+	vlist_add(&wireless_credentials, &credentials->node, credentials->name);
+}
 
 static void
 config_parse_wireless_interface(struct wireless_device *wdev, struct uci_section *s)
@@ -347,6 +393,7 @@ config_init_wireless(void)
 	struct wireless_device *wdev;
 	struct uci_element *e;
 	const char *dev_name;
+	const char *wifi_name;
 
 	if (!uci_wireless) {
 		DPRINTF("No wireless configuration found\n");
@@ -369,6 +416,18 @@ config_init_wireless(void)
 		wdev->vif_idx = 0;
 		vlist_update(&wdev->interfaces);
 	}
+
+        uci_foreach_element(&uci_wireless->sections, e) {
+		struct uci_section *s = uci_to_section(e);
+		if (strcmp(s->type, "wifi-credentials") != 0)
+			continue;
+
+		wifi_name = s->e.name;
+		netifd_log_message(L_NOTICE, "parsing %s wifi configuration\n", wifi_name);
+		config_parse_wireless_credentials(s, wifi_name);
+        }
+
+	vlist_flush(&wireless_credentials);
 
 	uci_foreach_element(&uci_wireless->sections, e) {
 		struct uci_section *s = uci_to_section(e);
